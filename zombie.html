@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MA1 PLANE SHOP</title>
+<style>
+body{margin:0;background:#000d1a;overflow:hidden;color:white;font-family:Arial}
+canvas{display:block}
+#ui{position:absolute;top:5px;width:100%;display:flex;justify-content:space-around;font-size:18px;font-weight:bold}
+#shopBtn{position:absolute;bottom:20px;right:20px;background:gold;color:black;padding:12px 20px;border:none;border-radius:20px;font-weight:bold;font-size:18px}
+#shop{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#111;padding:20px;border-radius:15px;width:85%;max-width:350px;display:none;text-align:center;border:2px solid gold}
+.plane{font-size:40px}
+.upg{margin:10px 0;padding:10px;background:#222;border-radius:10px}
+button{cursor:pointer}
+</style>
+</head>
+<body>
+<div id="ui"><div id="money">💰 0</div><div id="hp">❤️ 100</div><div id="lvl">✈️ LVL 1</div></div>
+<canvas id="game"></canvas>
+<button id="shopBtn" onclick="openShop()">🛒 شوب</button>
+<button id="start" onclick="start()" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:gold;padding:20px 40px;border:none;border-radius:15px;font-size:22px;font-weight:bold">▶️ ابدأ MA1</button>
+
+<div id="shop">
+<h2>🛒 شوب MA1</h2>
+<div id="shopMoney">فلوسك: 0</div>
+<div class="upg"><div class="plane" id="nextPlane">🛩️</div><div>تطوير الطيارة</div><div id="price">السعر: 500</div><button onclick="buy()" style="background:gold;padding:10px 20px;border:none;border-radius:10px;margin-top:5px;font-weight:bold">تطوير</button></div>
+<p style="font-size:12px">كل تطوير +500 سعر<br>قتل زومبي = 10 فلوس</p>
+<button onclick="closeShop()" style="background:red;color:white;padding:8px 15px;border:none;border-radius:10px">اقفل</button>
+</div>
+
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d');
+c.width=innerWidth; c.height=innerHeight;
+let planes=['✈️','🛩️','🛫','🚀','🛰️'];
+let player={x:c.width/2,y:c.height-100,hp:100,level:parseInt(localStorage.getItem('ma1_lvl')||1)};
+let money=parseInt(localStorage.getItem('ma1_money')||0);
+let bullets=[], zombies=[], running=false, fireRate=200, dmg=1, price=500;
+
+function updateUI(){
+ document.getElementById('money').innerText='💰 '+money;
+ document.getElementById('lvl').innerText=planes[player.level-1]+' LVL '+player.level;
+ document.getElementById('hp').innerText='❤️ '+player.hp;
+ document.getElementById('shopMoney').innerText='فلوسك: '+money;
+ document.getElementById('price').innerText='السعر: '+price;
+ document.getElementById('nextPlane').innerText=planes[Math.min(player.level,4)];
+ price = 500 * player.level;
+}
+updateUI();
+
+function start(){
+ document.getElementById('start').style.display='none';
+ running=true; player.hp=100; bullets=[]; zombies=[];
+ loop(); setInterval(()=>{if(running)spawn()},900);
+ setInterval(()=>{if(running)bullets.push({x:player.x,y:player.y-20})}, fireRate);
+}
+function spawn(){
+ let x=Math.random()*(c.width-50)+25;
+ zombies.push({x:x,y:-50,speed:1+Math.random()*2+player.level*0.2});
+}
+function loop(){
+ if(!running) return;
+ ctx.clearRect(0,0,c.width,c.height);
+ ctx.font='50px Arial'; ctx.textAlign='center'; ctx.fillText(planes[player.level-1],player.x,player.y);
+ bullets.forEach((b,i)=>{ b.y-=7; ctx.fillStyle='yellow'; ctx.beginPath(); ctx.arc(b.x,b.y,6+dmg,0,Math.PI*2); ctx.fill(); if(b.y<0)bullets.splice(i,1); });
+ zombies.forEach((z,zi)=>{
+  z.y+=z.speed; ctx.font='45px Arial'; ctx.fillText('🧟',z.x,z.y);
+  if(z.y>c.height){ zombies.splice(zi,1); player.hp-=10; }
+  if(Math.hypot(player.x-z.x,player.y-z.y)<50){ zombies.splice(zi,1); player.hp-=15; }
+  bullets.forEach((b,bi)=>{
+   if(Math.hypot(z.x-b.x,z.y-b.y)<35){ zombies.splice(zi,1); bullets.splice(bi,1); money+=10; localStorage.setItem('ma1_money',money); }
+  });
+  if(player.hp<=0){ running=false; alert('طاحت طيارتك! فلوسك: '+money); location.reload(); }
+ });
+ updateUI(); requestAnimationFrame(loop);
+}
+function openShop(){ running=false; document.getElementById('shop').style.display='block'; updateUI(); }
+function closeShop(){ document.getElementById('shop').style.display='none'; running=true; loop(); }
+function buy(){
+ if(money>=price){
+  money-=price; player.level++; if(player.level>5) player.level=5;
+  fireRate=Math.max(80,200-(player.level-1)*25); dmg=player.level;
+  localStorage.setItem('ma1_money',money); localStorage.setItem('ma1_lvl',player.level);
+  alert('تم التطوير! طيارتك الحين: '+planes[player.level-1]); updateUI();
+ }else{ alert('فلوسك ما تكفي! تحتاج '+price); }
+}
+window.addEventListener('touchmove',e=>{ player.x=e.touches[0].clientX; player.y=e.touches[0].clientY; });
+window.addEventListener('mousemove',e=>{ player.x=e.clientX; player.y=e.clientY; });
+</script>
+</body>
+</html>
